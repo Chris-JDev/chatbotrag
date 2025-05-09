@@ -1,8 +1,9 @@
 streamlit
 langchain
+langchain-community
+langchain_ollama
 pyngrok
 pdfplumber
 docx2txt
 chromadb
-langchain_ollama
 python-docx
