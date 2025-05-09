@@ -1,0 +1,8 @@
+streamlit
+langchain
+pyngrok
+pdfplumber
+docx2txt
+chromadb
+langchain_ollama
+python-docx
