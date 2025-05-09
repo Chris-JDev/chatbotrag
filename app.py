@@ -18,9 +18,8 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
 )
 
-# Read the Ollama base URL from env (set by docker-compose)
-OLLAMA_BASE_URL = "https://e179-5-32-57-218.ngrok-free.app"  # replace with yours
-
+# ✅ Set to public ngrok URL for local Ollama
+OLLAMA_BASE_URL = "https://e179-5-32-57-218.ngrok-free.app"
 
 MARKETING_CATEGORIES = [
     "Digital Marketing", "Content Marketing", "Social Media Marketing",
@@ -75,7 +74,7 @@ def process_documents(docs_list):
         if os.path.exists(dir_):
             shutil.rmtree(dir_, onerror=lambda func, path, exc: (os.chmod(path, 0o777), func(path)))
 
-        for model in ["nomic-embed-text","all-MiniLM","llama2"]:
+        for model in ["nomic-embed-text", "all-MiniLM", "llama2"]:
             try:
                 st.info(f"Embedding with {model}…")
                 emb = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=model)
@@ -150,11 +149,6 @@ def init_state():
 def main():
     st.set_page_config(page_title="Marketing Advisor", page_icon="📊", layout="wide")
     init_state()
-
-    # Launch background tunnels once
-    if "ollama_url" not in st.session_state:
-        st.session_state.ollama_url = ngrok.connect(11434, "http").public_url
-        st.session_state.streamlit_url = ngrok.connect(8501, "http").public_url
 
     with st.sidebar:
         st.title("Marketing Advisor")
@@ -237,5 +231,4 @@ def main():
         st.chat_message("assistant").markdown(fr)
 
 if __name__=="__main__":
-    os.system("nohup ollama serve --port 11434 > /tmp/ollama.log 2>&1 &")
     main()
