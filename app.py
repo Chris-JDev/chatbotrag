@@ -9,7 +9,7 @@ import streamlit as st
 from pyngrok import ngrok
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import PDFPlumberLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders import PDFPlumberLoader, TextLoader, Docx2txtLoader
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain.vectorstores import Chroma
 from langchain_core.prompts import (
