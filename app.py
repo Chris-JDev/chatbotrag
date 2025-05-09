@@ -19,7 +19,8 @@ from langchain_core.prompts import (
 )
 
 # Read the Ollama base URL from env (set by docker-compose)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+OLLAMA_BASE_URL = "https://e179-5-32-57-218.ngrok-free.app"  # replace with yours
+
 
 MARKETING_CATEGORIES = [
     "Digital Marketing", "Content Marketing", "Social Media Marketing",
