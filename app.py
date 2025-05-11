@@ -38,40 +38,6 @@ CATEGORY_DESCRIPTIONS = {
     "Market Research": "Methods to gather and analyze information about consumers, competitors, and market trends."
 }
 
-# ------------------ Task List Functions ------------------
-def init_task_list():
-    if 'tasks' not in st.session_state:
-        st.session_state.tasks = []
-
-def add_task(task: str):
-    st.session_state.tasks.append({'task': task, 'completed': False})
-
-def toggle_task(index: int):
-    st.session_state.tasks[index]['completed'] = not st.session_state.tasks[index]['completed']
-
-def delete_task(index: int):
-    st.session_state.tasks.pop(index)
-
-
-def task_manager_ui():
-    st.sidebar.header("Task Manager")
-    new_task = st.sidebar.text_input("Add a new task")
-    if st.sidebar.button("Add Task") and new_task:
-        add_task(new_task)
-    if st.sidebar.button("Clear All Tasks"):
-        st.session_state.tasks.clear()
-
-    st.sidebar.markdown("### Your Tasks")
-    for idx, task in enumerate(st.session_state.tasks):
-        cols = st.sidebar.columns([0.05, 0.7, 0.25])
-        if cols[0].checkbox("", value=task['completed'], key=f"completed_{idx}"):
-            toggle_task(idx)
-        cols[1].markdown(f"~~{task['task']}~~" if task['completed'] else task['task'])
-        if cols[2].button("Delete", key=f"delete_{idx}"):
-            delete_task(idx)
-
-# ---------------------------------------------------------
-
 def check_ollama_connection():
     try:
         client = ChatOllama(base_url=OLLAMA_BASE_URL, model="llama2", temperature=0.3)
@@ -80,35 +46,93 @@ def check_ollama_connection():
     except Exception as e:
         return False, str(e)
 
-# ... [other helper functions unchanged] ...
-
 def process_documents(docs_list):
-    # existing implementation
-    ...
+    with tempfile.TemporaryDirectory() as td:
+        paths = []
+        for file in docs_list:
+            p = os.path.join(td, file.name)
+            with open(p, "wb") as f: f.write(file.getbuffer())
+            paths.append(p)
+        texts = []
+        for p in paths:
+            try:
+                if p.endswith(".pdf"): loader = PDFPlumberLoader(p)
+                elif p.endswith(".docx"): loader = Docx2txtLoader(p)
+                else: loader = TextLoader(p)
+                texts.extend(loader.load())
+            except Exception as e:
+                st.error(f"Load error {os.path.basename(p)}: {e}")
+        if not texts:
+            st.error("No documents loaded."); return None
+
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        chunks = splitter.split_documents(texts)
+        if not chunks:
+            st.error("No chunks generated."); return None
+
+        dir_ = "./marketing_db"
+        if os.path.exists(dir_):
+            shutil.rmtree(dir_, onerror=lambda func, path, exc: (os.chmod(path, 0o777), func(path)))
+
+        for model in ["nomic-embed-text", "all-MiniLM", "llama2"]:
+            try:
+                st.info(f"Embedding with {model}…")
+                emb = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=model)
+                if not emb.embed_query(chunks[0].page_content[:30]):
+                    st.warning(f"{model} gave empty embedding"); continue
+                vs = Chroma.from_documents(chunks, emb, persist_directory=dir_)
+                st.success(f"Stored vectors with {model}")
+                return vs
+            except Exception as e:
+                st.warning(f"{model} failed: {e}")
+        st.error("All embedding models failed.")
+        return None
 
 def get_retriever():
-    # existing implementation
-    ...
+    if not st.session_state.vector_store: return None
+    return st.session_state.vector_store.as_retriever(search_type="mmr",
+                                                      search_kwargs={"k":6,"fetch_k":8})
 
 def get_prompt():
-    # existing implementation
-    ...
+    return ChatPromptTemplate.from_messages([
+        SystemMessagePromptTemplate.from_template("You are a marketing QA system. Use only provided docs."),
+        HumanMessagePromptTemplate.from_template("Context:\n{context}\n\nQuestion: {question}")
+    ])
 
 def init_qa_chain():
-    # existing implementation
-    ...
+    if not st.session_state.qa_chain and st.session_state.vector_store:
+        try:
+            llm = ChatOllama(base_url=OLLAMA_BASE_URL, model="llama2", temperature=0.1)
+            retr = get_retriever()
+            if retr:
+                qa = RetrievalQA.from_chain_type(
+                    llm=llm, chain_type="stuff", retriever=retr,
+                    chain_type_kwargs={"prompt": get_prompt()}
+                )
+                st.session_state.qa_chain = qa
+                return qa
+        except Exception as e:
+            st.error(f"QA init error: {e}")
+    return st.session_state.qa_chain
 
 def format_resp(r):
-    # existing implementation
-    ...
+    return getattr(r, "content", str(r)).strip()
 
 def save_history(msgs, fname=None):
-    # existing implementation
-    ...
+    os.makedirs("chat_histories", exist_ok=True)
+    if not fname: fname = f"chat_{datetime.datetime.now():%Y%m%d_%H%M%S}.json"
+    path = os.path.join("chat_histories", fname)
+    try:
+        with open(path,"w") as f: json.dump(msgs, f, indent=2)
+        return True
+    except Exception as e:
+        st.error(f"Save error: {e}"); return False
 
 def load_history(fname):
-    # existing implementation
-    ...
+    try:
+        with open(os.path.join("chat_histories", fname)) as f: return json.load(f)
+    except Exception as e:
+        st.error(f"Load error: {e}"); return None
 
 def init_state():
     ss = st.session_state
@@ -122,16 +146,10 @@ def init_state():
                   [f for f in os.listdir("chat_histories") if f.endswith(".json")]
                   if os.path.exists("chat_histories") else [])
 
-
 def main():
     st.set_page_config(page_title="Marketing Advisor", page_icon="📊", layout="wide")
     init_state()
-    init_task_list()
 
-    # Task manager in sidebar
-    task_manager_ui()
-
-    # Existing sidebar UI
     with st.sidebar:
         st.title("Marketing Advisor")
         cat = st.selectbox("Focus area", MARKETING_CATEGORIES,
@@ -158,10 +176,21 @@ def main():
         st.header("Quick Idea Generator")
         if st.button("Generate Quick Ideas"):
             with st.spinner("Generating…"):
-                # existing implementation...
-                ...
-
+                if st.session_state.vector_store:
+                    retr = get_retriever()
+                    docs = retr.get_relevant_documents(f"Generate 5 ideas for {st.session_state.selected_category}")
+                    ctx = "\n\n".join(d.page_content for d in docs)
+                    prompt = (f"Based on these docs:\n{ctx}\n"
+                              f"Generate 5 quick marketing ideas for {st.session_state.selected_category}. "
+                              "For each: headline + 1-sentence explanation.")
+                    r = st.session_state.llm.invoke(prompt)
+                    ideas = getattr(r, "content", str(r))
+                else:
+                    r = st.session_state.llm.invoke(f"List 5 quick marketing ideas for {st.session_state.selected_category}.")
+                    ideas = getattr(r, "content", str(r))
+                st.session_state.messages.append({"role":"assistant","content":ideas})
         st.markdown("---")
+
         st.header("Chat Management")
         c1,c2 = st.columns(2)
         with c1:
@@ -178,7 +207,6 @@ def main():
                 if msgs:
                     st.session_state.messages=msgs; st.success("Loaded!")
 
-    # Main area
     st.title(f"Marketing Advisor: {st.session_state.selected_category}")
 
     if not st.session_state.chat_started:
@@ -202,5 +230,5 @@ def main():
         st.session_state.messages.append({"role":"assistant","content":fr})
         st.chat_message("assistant").markdown(fr)
 
-if __name__ == "__main__":
-    main()
+if __name__=="__main__":
+    main() 
