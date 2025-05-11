@@ -19,7 +19,7 @@ from langchain_core.prompts import (
 )
 
 # ✅ Set to public ngrok URL for local Ollama
-OLLAMA_BASE_URL = "https://528a-5-32-57-218.ngrok-free.app"
+OLLAMA_BASE_URL = "https://7969-91-73-226-54.ngrok-free.app"
 
 MARKETING_CATEGORIES = [
     "Digital Marketing", "Content Marketing", "Social Media Marketing",
