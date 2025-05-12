@@ -52,7 +52,7 @@ from langchain_core.prompts import (
 # ---------- Core Configuration ----------
 # Set to your Ollama URL or localhost
 OLLAMA_BASE_URL = os.getenv(
-    "https://c1f7-5-32-57-218.ngrok-free.app",
+    "https://4165-5-32-57-218.ngrok-free.app",
     "http://localhost:11434"  # Default to localhost if not set
 )
 
