@@ -31,7 +31,7 @@ from langchain_core.prompts import (
 # Set to your public ngrok URL for Ollama when in development; fallback to localhost in absence
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
-    "https://7969-91-73-226-54.ngrok-free.app"
+    "https://c1f7-5-32-57-218.ngrok-free.app"
 )
 
 # Enable PWA: generates manifest.json & registers service worker
