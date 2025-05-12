@@ -7,7 +7,12 @@ from typing import List, Dict, Any, Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_lottie import st_lottie
+# Attempt Lottie support; if missing, stub it out
+try:
+    from streamlit_lottie import st_lottie
+except ImportError:
+    def st_lottie(*args, **kwargs):
+        pass
 import requests
 from streamlit_pwa import EnablePWA
 
@@ -23,8 +28,11 @@ from langchain_core.prompts import (
 )
 
 # ---------- PWA & Offline Setup ----------
-# Use local Ollama by default for offline capability
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+# Set to your public ngrok URL for Ollama when in development; fallback to localhost in absence
+OLLAMA_BASE_URL = os.getenv(
+    "OLLAMA_BASE_URL",
+    "https://c1f7-5-32-57-218.ngrok-free.app"
+)
 
 # Enable PWA: generates manifest.json & registers service worker
 EnablePWA(
@@ -81,9 +89,12 @@ def process_documents(docs_list):
         texts = []
         for p in paths:
             try:
-                if p.endswith(".pdf"): loader = PDFPlumberLoader(p)
-                elif p.endswith(".docx"): loader = Docx2txtLoader(p)
-                else: loader = TextLoader(p)
+                if p.endswith(".pdf"):
+                    loader = PDFPlumberLoader(p)
+                elif p.endswith(".docx"):
+                    loader = Docx2txtLoader(p)
+                else:
+                    loader = TextLoader(p)
                 texts.extend(loader.load())
             except Exception as e:
                 st.error(f"Load error {os.path.basename(p)}: {e}")
@@ -91,7 +102,9 @@ def process_documents(docs_list):
             st.error("No documents loaded.")
             return None
 
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=100
+        )
         chunks = splitter.split_documents(texts)
         if not chunks:
             st.error("No chunks generated.")
@@ -99,16 +112,27 @@ def process_documents(docs_list):
 
         dir_ = "./marketing_db"
         if os.path.exists(dir_):
-            shutil.rmtree(dir_, onerror=lambda func, path, exc: (os.chmod(path, 0o777), func(path)))
+            shutil.rmtree(
+                dir_, onerror=lambda func, path, exc: (
+                    os.chmod(path, 0o777), func(path)
+                )
+            )
 
         for model in ["nomic-embed-text", "all-MiniLM", "llama2"]:
             try:
                 st.info(f"Embedding with {model}…")
-                emb = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=model)
-                if not emb.embed_query(chunks[0].page_content[:30]):
+                emb = OllamaEmbeddings(
+                    base_url=OLLAMA_BASE_URL, model=model
+                )
+                # Test embedding
+                if not emb.embed_query(
+                    chunks[0].page_content[:30]
+                ):
                     st.warning(f"{model} gave empty embedding")
                     continue
-                vs = Chroma.from_documents(chunks, emb, persist_directory=dir_)
+                vs = Chroma.from_documents(
+                    chunks, emb, persist_directory=dir_
+                )
                 st.success(f"Stored vectors with {model}")
                 return vs
             except Exception as e:
@@ -121,7 +145,9 @@ def get_retriever():
     vs = st.session_state.get("vector_store")
     if not vs:
         return None
-    return vs.as_retriever(search_type="mmr", search_kwargs={"k":6, "fetch_k":8})
+    return vs.as_retriever(
+        search_type="mmr", search_kwargs={"k": 6, "fetch_k": 8}
+    )
 
 # Create prompt template
 def get_prompt():
@@ -131,12 +157,15 @@ def get_prompt():
         ),
         HumanMessagePromptTemplate.from_template(
             "Context:\n{context}\n\nQuestion: {question}"
-        )
+        ),
     ])
 
 # Initialize QA chain
 def init_qa_chain():
-    if not st.session_state.get("qa_chain") and st.session_state.get("vector_store"):
+    if (
+        not st.session_state.get("qa_chain")
+        and st.session_state.get("vector_store")
+    ):
         try:
             llm = get_ollama_client("llama2", 0.1)
             retr = get_retriever()
@@ -145,7 +174,7 @@ def init_qa_chain():
                     llm=llm,
                     chain_type="stuff",
                     retriever=retr,
-                    chain_type_kwargs={"prompt": get_prompt()}
+                    chain_type_kwargs={"prompt": get_prompt()},
                 )
                 st.session_state.qa_chain = qa
                 return qa
@@ -171,6 +200,7 @@ def save_history(msgs, fname=None):
         st.error(f"Save error: {e}")
         return False
 
+
 def load_history(fname):
     try:
         with open(os.path.join("chat_histories", fname)) as f:
@@ -190,38 +220,53 @@ def init_state():
     ss.setdefault("chat_started", False)
     ss.setdefault(
         "available_histories",
-        [f for f in os.listdir("chat_histories") if f.endswith(".json")] if os.path.exists("chat_histories") else []
+        [
+            f for f in os.listdir("chat_histories") if f.endswith(".json")
+        ]
+        if os.path.exists("chat_histories")
+        else [],
     )
 
 # ---------- Streamlit App ----------
 def main():
     inject_pwa()
-    st.set_page_config(page_title="Marketing Advisor", page_icon="📊", layout="wide")
+    st.set_page_config(
+        page_title="Marketing Advisor",
+        page_icon="📊",
+        layout="wide",
+    )
     init_state()
 
     with st.sidebar:
         st.title("Marketing Advisor")
         # Lottie introduction animation
-        lottie_url = "https://assets7.lottiefiles.com/packages/lf20_j1adxtyb.json"
+        lottie_url = (
+            "https://assets7.lottiefiles.com/packages/lf20_j1adxtyb.json"
+        )
         lottie_json = load_lottieurl(lottie_url)
         if lottie_json:
             st_lottie(lottie_json, height=150, key="intro_lottie")
 
         # Category selector
         cat = st.selectbox(
-            "Focus area", MARKETING_CATEGORIES,
-            index=MARKETING_CATEGORIES.index(st.session_state.selected_category)
+            "Focus area",
+            MARKETING_CATEGORIES,
+            index=
+                MARKETING_CATEGORIES.index(
+                    st.session_state.selected_category
+                ),
         )
         if cat != st.session_state.selected_category:
             st.session_state.selected_category = cat
         st.info(CATEGORY_DESCRIPTIONS[cat])
         st.markdown("---")
 
-        # Document upload & knowledge base creation
+        # Document upload
         st.header("Upload Resources")
         files = st.file_uploader(
             "Upload marketing docs (PDF/DOCX/TXT)",
-            type=["pdf","docx","txt"], accept_multiple_files=True
+            type=["pdf", "docx", "txt"],
+            accept_multiple_files=True,
         )
         if files and st.button("Create Knowledge Base"):
             vs = process_documents(files)
@@ -240,68 +285,7 @@ def main():
                     docs = retr.get_relevant_documents(
                         f"Generate 5 ideas for {st.session_state.selected_category}"
                     )
-                    ctx = "\n\n".join(d.page_content for d in docs)
-                    prompt = (
-                        f"Based on these docs:\n{ctx}\n"
-                        f"Generate 5 quick marketing ideas for {st.session_state.selected_category}. "
-                        "For each: headline + 1-sentence explanation."
-                    )
-                    r = st.session_state.llm.invoke(prompt)
-                    ideas = getattr(r, "content", str(r))
-                else:
-                    r = st.session_state.llm.invoke(
-                        f"List 5 quick marketing ideas for {st.session_state.selected_category}."
-                    )
-                    ideas = getattr(r, "content", str(r))
-                st.session_state.messages.append({"role":"assistant","content":ideas})
-        st.markdown("---")
+                    ctx = "
 
-        # Chat management
-        st.header("Chat Management")
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("Save Chat"):
-                if save_history(st.session_state.messages):
-                    st.success("Chat saved!")
-        with c2:
-            if st.button("Clear Chat"):
-                st.session_state.messages = []
-                st.success("Cleared chat!")
-
-        if st.session_state.available_histories:
-            h = st.selectbox("Load chat", [""] + st.session_state.available_histories)
-            if h and st.button("Load Selected Chat"):
-                msgs = load_history(h)
-                if msgs:
-                    st.session_state.messages = msgs
-                    st.success("Chat loaded!")
-
-    # Main area
-    st.title(f"Marketing Advisor: {st.session_state.selected_category}")
-    if not st.session_state.chat_started:
-        st.info("Use the sidebar to upload docs or start chatting.")
-        if st.button("Start Chat"):
-            st.session_state.chat_started = True
-            st.experimental_rerun()
-
-    # Render conversation
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
-
-    # User input
-    if ui := st.chat_input("Ask your marketing question…"):
-        st.session_state.chat_started = True
-        st.session_state.messages.append({"role":"user","content":ui})
-        if st.session_state.vector_store:
-            qa = init_qa_chain()
-            ans = qa.run(ui) if qa else "Error: QA unavailable"
-        else:
-            r = st.session_state.llm.invoke(ui)
-            ans = getattr(r,"content",str(r))
-        fr = format_resp(ans)
-        st.session_state.messages.append({"role":"assistant","content":fr})
-        st.chat_message("assistant").markdown(fr)
-
-if __name__ == "__main__":
-    main()
+".split("
+"))]}
