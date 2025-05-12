@@ -1,9 +1,10 @@
 streamlit
 langchain
 langchain-community
-langchain_ollama
-pyngrok
+langchain-core
+streamlit-lottie
+requests
+chromadb
 pdfplumber
 docx2txt
-chromadb
-python-docx
+typing-extensions
