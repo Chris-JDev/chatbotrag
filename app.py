@@ -31,7 +31,7 @@ from langchain_core.prompts import (
 # Set to your public ngrok URL for Ollama when in development; fallback to localhost in absence
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
-    "https://c1f7-5-32-57-218.ngrok-free.app"
+    "https://7969-91-73-226-54.ngrok-free.app"
 )
 
 # Enable PWA: generates manifest.json & registers service worker
@@ -286,6 +286,72 @@ def main():
                         f"Generate 5 ideas for {st.session_state.selected_category}"
                     )
                     ctx = "
+
+".join(d.page_content for d in docs).join(d.page_content for d in docs)
+                    prompt = (
+                        f"Based on these docs:
+{ctx}
+"
+                        f"Generate 5 quick marketing ideas for {st.session_state.selected_category}. "
+                        "For each: headline + 1-sentence explanation."
+                    )
+                    r = st.session_state.llm.invoke(prompt)
+                    ideas = getattr(r, "content", str(r))
+                else:
+                    r = st.session_state.llm.invoke(
+                        f"List 5 quick marketing ideas for {st.session_state.selected_category}."
+                    )
+                    ideas = getattr(r, "content", str(r))
+                st.session_state.messages.append({"role": "assistant", "content": ideas})
+        st.markdown("---")
+
+        # Chat Management
+        st.header("Chat Management")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Save Chat"):
+                if save_history(st.session_state.messages):
+                    st.success("Chat saved!")
+        with c2:
+            if st.button("Clear Chat"):
+                st.session_state.messages = []
+                st.success("Cleared chat!")
+
+        if st.session_state.available_histories:
+            h = st.selectbox("Load chat", [""] + st.session_state.available_histories)
+            if h and st.button("Load Selected Chat"):
+                msgs = load_history(h)
+                if msgs:
+                    st.session_state.messages = msgs
+                    st.success("Chat loaded!")
+
+    # Main area
+    st.title(f"Marketing Advisor: {st.session_state.selected_category}")
+    if not st.session_state.chat_started:
+        st.info("Use the sidebar to upload docs or start chatting.")
+        if st.button("Start Chat"):
+            st.session_state.chat_started = True
+            st.experimental_rerun()
+
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
+
+    if ui := st.chat_input("Ask your marketing question…"):
+        st.session_state.chat_started = True
+        st.session_state.messages.append({"role": "user", "content": ui})
+        if st.session_state.vector_store:
+            qa = init_qa_chain()
+            ans = qa.run(ui) if qa else "Error: QA unavailable"
+        else:
+            r = st.session_state.llm.invoke(ui)
+            ans = getattr(r, "content", str(r))
+        fr = format_resp(ans)
+        st.session_state.messages.append({"role": "assistant", "content": fr})
+        st.chat_message("assistant").markdown(fr)
+
+if __name__ == "__main__":
+    main()
 
 ".split("
 "))]}
