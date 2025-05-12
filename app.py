@@ -31,7 +31,7 @@ from langchain_core.prompts import (
 # Set to your public ngrok URL for Ollama when in development; fallback to localhost in absence
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
-    "https://c1f7-5-32-57-218.ngrok-free.app"
+    "https:///c1f7-5-32-57-218.ngrok-free.app"
 )
 
 # Enable PWA: generates manifest.json & registers service worker
@@ -285,13 +285,10 @@ def main():
                     docs = retr.get_relevant_documents(
                         f"Generate 5 ideas for {st.session_state.selected_category}"
                     )
-                    ctx = "
-
-".join(d.page_content for d in docs).join(d.page_content for d in docs)
+                    # FIX: Line 228 - Use proper newline escape sequence
+                    ctx = "\n\n".join(d.page_content for d in docs)
                     prompt = (
-                        f"Based on these docs:
-{ctx}
-"
+                        f"Based on these docs:\n{ctx}\n"
                         f"Generate 5 quick marketing ideas for {st.session_state.selected_category}. "
                         "For each: headline + 1-sentence explanation."
                     )
@@ -350,8 +347,26 @@ def main():
         st.session_state.messages.append({"role": "assistant", "content": fr})
         st.chat_message("assistant").markdown(fr)
 
+# Define marketing categories and descriptions (missing in original code)
+MARKETING_CATEGORIES = [
+    "Social Media Marketing",
+    "Content Marketing",
+    "Email Marketing",
+    "SEO",
+    "PPC Advertising",
+    "Influencer Marketing",
+    "Video Marketing"
+]
+
+CATEGORY_DESCRIPTIONS = {
+    "Social Media Marketing": "Strategies for Facebook, Instagram, Twitter and LinkedIn",
+    "Content Marketing": "Blogs, articles, and content strategy",
+    "Email Marketing": "Newsletter and email campaign optimization",
+    "SEO": "Search engine optimization techniques",
+    "PPC Advertising": "Pay-per-click campaign management",
+    "Influencer Marketing": "Working with content creators and influencers",
+    "Video Marketing": "YouTube, TikTok and video content strategies"
+}
+
 if __name__ == "__main__":
     main()
-
-".split("
-"))]}
