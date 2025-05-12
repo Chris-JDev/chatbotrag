@@ -14,52 +14,47 @@ except ImportError:
     def st_lottie(*args, **kwargs):
         pass
 import requests
-from streamlit_pwa import EnablePWA
 
+# Define marketing categories and descriptions
+MARKETING_CATEGORIES = [
+    "Social Media Marketing",
+    "Content Marketing",
+    "Email Marketing",
+    "SEO",
+    "PPC Advertising",
+    "Influencer Marketing",
+    "Video Marketing"
+]
+
+CATEGORY_DESCRIPTIONS = {
+    "Social Media Marketing": "Strategies for Facebook, Instagram, Twitter and LinkedIn",
+    "Content Marketing": "Blogs, articles, and content strategy",
+    "Email Marketing": "Newsletter and email campaign optimization",
+    "SEO": "Search engine optimization techniques",
+    "PPC Advertising": "Pay-per-click campaign management",
+    "Influencer Marketing": "Working with content creators and influencers",
+    "Video Marketing": "YouTube, TikTok and video content strategies"
+}
+
+# Import LangChain components
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PDFPlumberLoader, TextLoader, Docx2txtLoader
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain.vectorstores import Chroma
+from langchain_community.llms import Ollama  # Updated import
+from langchain_community.embeddings import OllamaEmbeddings  # Updated import
+from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
 
-# ---------- PWA & Offline Setup ----------
-# Set to your public ngrok URL for Ollama when in development; fallback to localhost in absence
+# ---------- Core Configuration ----------
+# Set to your Ollama URL or localhost
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
-    "https:///c1f7-5-32-57-218.ngrok-free.app"
+    "https://c1f7-5-32-57-218.ngrok-free.app"  # Default to localhost if not set
 )
-
-# Enable PWA: generates manifest.json & registers service worker
-EnablePWA(
-    name="Marketing Advisor",
-    short_name="MktAdvisor",
-    icon="/static/icons/icon-192.png",
-    start_url=".",
-    display="standalone",
-    background_color="#FFFFFF",
-    theme_color="#00BFFF",
-)
-
-# Inject manifest link & service worker registration into the page
-def inject_pwa():
-    components.html(
-        """
-        <link rel=\"manifest\" href=\"/static/manifest.json\">
-        <script>
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/static/service-worker.js')
-            .then(() => console.log('Service Worker registered'))
-            .catch(err => console.warn('SW registration failed', err));
-        }
-        </script>
-        """,
-        height=0,
-    )
 
 # Load Lottie animations for richer UI
 @st.cache_data(show_spinner=False)
@@ -74,8 +69,8 @@ def load_lottieurl(url: str) -> Optional[Dict]:
 
 # ---------- Core Helpers ----------
 @st.cache_resource(show_spinner=False)
-def get_ollama_client(model: str, temp: float) -> ChatOllama:
-    return ChatOllama(base_url=OLLAMA_BASE_URL, model=model, temperature=temp)
+def get_ollama_client(model: str, temp: float = 0.3):
+    return Ollama(base_url=OLLAMA_BASE_URL, model=model, temperature=temp)
 
 @st.cache_data(show_spinner=False)
 def process_documents(docs_list):
@@ -229,7 +224,6 @@ def init_state():
 
 # ---------- Streamlit App ----------
 def main():
-    inject_pwa()
     st.set_page_config(
         page_title="Marketing Advisor",
         page_icon="📊",
@@ -285,7 +279,7 @@ def main():
                     docs = retr.get_relevant_documents(
                         f"Generate 5 ideas for {st.session_state.selected_category}"
                     )
-                    # FIX: Line 228 - Use proper newline escape sequence
+                    # Fixed line that had an error before
                     ctx = "\n\n".join(d.page_content for d in docs)
                     prompt = (
                         f"Based on these docs:\n{ctx}\n"
@@ -346,27 +340,6 @@ def main():
         fr = format_resp(ans)
         st.session_state.messages.append({"role": "assistant", "content": fr})
         st.chat_message("assistant").markdown(fr)
-
-# Define marketing categories and descriptions (missing in original code)
-MARKETING_CATEGORIES = [
-    "Social Media Marketing",
-    "Content Marketing",
-    "Email Marketing",
-    "SEO",
-    "PPC Advertising",
-    "Influencer Marketing",
-    "Video Marketing"
-]
-
-CATEGORY_DESCRIPTIONS = {
-    "Social Media Marketing": "Strategies for Facebook, Instagram, Twitter and LinkedIn",
-    "Content Marketing": "Blogs, articles, and content strategy",
-    "Email Marketing": "Newsletter and email campaign optimization",
-    "SEO": "Search engine optimization techniques",
-    "PPC Advertising": "Pay-per-click campaign management",
-    "Influencer Marketing": "Working with content creators and influencers",
-    "Video Marketing": "YouTube, TikTok and video content strategies"
-}
 
 if __name__ == "__main__":
     main()
