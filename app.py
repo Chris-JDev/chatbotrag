@@ -25,7 +25,7 @@ from langchain_core.prompts import (
 # ---------- Configuration ----------
 
 # 1) If you already ran "ngrok http 11434", paste its URL here:
-OLLAMA_BASE_URL = "https://7969-91-73-226-54.ngrok-free.app"
+OLLAMA_BASE_URL = "https://40e6-91-73-226-54.ngrok-free.app"
 
 # 2) (Optional) To auto-start ngrok in‐code instead, uncomment these two lines:
 # tunnel = ngrok.connect(11434, bind_tls=True)
