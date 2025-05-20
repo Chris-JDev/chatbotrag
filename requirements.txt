@@ -8,3 +8,14 @@ chromadb
 pdfplumber
 docx2txt
 typing-extensions
+langchain_ollama
+
+streamlit
+python-dotenv
+requests
+langchain
+langchain-ollama
+langchain-community
+chromadb
+pdfplumber
+docx2txt
