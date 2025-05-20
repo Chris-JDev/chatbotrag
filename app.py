@@ -53,7 +53,7 @@ from langchain_core.prompts import (
 
 # ---------- Core Configuration ----------
 OLLAMA_BASE_URL = os.getenv(
-    "OLLAMA_BASE_URL", "http://localhost:11434"
+    "https://40e6-91-73-226-54.ngrok-free.app", "http://localhost:11434"
 )
 
 # Load Lottie animations for richer UI
