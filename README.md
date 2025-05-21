@@ -118,9 +118,3 @@ A Streamlit-based **Marketing Advisor** that uses Retrieval-Augmented Generation
 ```
 OLLAMA_BASE_URL=https://<your-ngrok-or-render-URL>
 ```
-
----
-
-## 📝 License
-
-MIT © Chris Jestin
