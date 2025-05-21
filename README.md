@@ -25,25 +25,19 @@ A Streamlit-based **Marketing Advisor** that uses Retrieval-Augmented Generation
 
 ## 📁 Repo Structure
 
+```
 .
 ├── .gitignore
-├── Procfile # for Render.com deployment
-├── app.py # main Streamlit application
-├── requirements.txt # Python dependencies
-└── README.md # this file
+├── Procfile               # for Render.com deployment
+├── app.py                 # main Streamlit application
+├── requirements.txt       # Python dependencies
+└── README.md              # this file
+```
 
-markdown
-Copy
-Edit
-
-- **`app.py`**  
-  Entry point for the Streamlit app.
-- **`requirements.txt`**  
-  All Python packages required (Streamlit, langchain, Ollama bindings, Chroma, loaders, etc.).
-- **`.gitignore`**  
-  Excludes cache, vector DB, logs, histories and `.env`.
-- **`Procfile`**  
-  `web: streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
+- **`app.py`**: Entry point for the Streamlit app.  
+- **`requirements.txt`**: All Python packages required.  
+- **`.gitignore`**: Excludes cache, vector DB, logs, histories, `.env`.  
+- **`Procfile`**: `web: streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
 
 ---
 
@@ -53,95 +47,80 @@ Edit
    ```bash
    git clone https://github.com/Chris-JDev/chatbotrag.git
    cd chatbotrag
-Create & activate a virtual environment
+   ```
 
-bash
-Copy
-Edit
-python3 -m venv .venv
-source .venv/bin/activate    # macOS/Linux
-.venv\Scripts\activate       # Windows
-Install dependencies
+2. **Create & activate a virtual environment**  
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate    # macOS/Linux
+   .venv\Scripts\activate     # Windows
+   ```
 
-bash
-Copy
-Edit
-pip install -r requirements.txt
-Run Ollama and expose via ngrok
+3. **Install dependencies**  
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-bash
-Copy
-Edit
-# Start Ollama on port 11434
-ollama serve --host 0.0.0.0 --port 11434
+4. **Run Ollama and expose via ngrok**  
+   ```bash
+   # Start Ollama on port 11434
+   ollama serve --host 0.0.0.0 --port 11434
 
-# In another terminal:
-ngrok http 11434
-Copy the HTTPS forwarding URL (e.g. https://abcd1234.ngrok-free.app).
+   # In another terminal:
+   ngrok http 11434
+   ```
+   Copy the HTTPS forwarding URL (e.g. `https://abcd1234.ngrok-free.app`).
 
-Create a .env file
+5. **Create a `.env` file**  
+   ```ini
+   OLLAMA_BASE_URL=https://<your-ngrok-url>
+   ```
 
-ini
-Copy
-Edit
-OLLAMA_BASE_URL=https://<your-ngrok-url>
-Launch the Streamlit app
+6. **Launch the Streamlit app**  
+   ```bash
+   streamlit run app.py      --server.port 8501      --server.address 0.0.0.0
+   ```
+   Open <http://localhost:8501>.
 
-bash
-Copy
-Edit
-streamlit run app.py \
-  --server.port 8501 \
-  --server.address 0.0.0.0
-Open http://localhost:8501 in your browser.
+---
 
-☁️ Deploy on Render.com
-Provision Ollama service
+## ☁️ Deploy on Render.com
 
-Create a Web Service on Render.
+1. **Ollama Service**  
+   - New Web Service → connect any repo  
+   - Start command:  
+     ```
+     ollama serve --host 0.0.0.0 --port 11434
+     ```  
+   - Set environment var:  
+     ```
+     OLLAMA_ORIGINS=["*"]
+     ```  
+   - Deploy and copy URL (e.g. `https://my-ollama.onrender.com`).
 
-Start command:
+2. **Streamlit App Service**  
+   - New Web Service → connect `Chris-JDev/chatbotrag`  
+   - Build: `pip install -r requirements.txt`  
+   - Start (Procfile):  
+     ```
+     web: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+     ```  
+   - Env var:  
+     ```
+     OLLAMA_BASE_URL=https://my-ollama.onrender.com
+     ```  
+   - Deploy.
 
-css
-Copy
-Edit
-ollama serve --host 0.0.0.0 --port 11434
-In Environment settings, add:
+---
 
-ini
-Copy
-Edit
-OLLAMA_ORIGINS=["*"]
-Deploy → copy the public URL (e.g. https://my-ollama.onrender.com).
+## 🔒 Environment Variables
 
-Provision Streamlit service
+```
+OLLAMA_BASE_URL=https://<your-ngrok-or-render-URL>
+```
 
-Create a second Web Service, link to Chris-JDev/chatbotrag.
+---
 
-Build command:
+## 📝 License
 
-nginx
-Copy
-Edit
-pip install -r requirements.txt
-Start command (in Procfile or settings):
-
-nginx
-Copy
-Edit
-streamlit run app.py --server.port $PORT --server.address 0.0.0.0
-In Environment settings, add:
-
-ini
-Copy
-Edit
-OLLAMA_BASE_URL=https://my-ollama.onrender.com
-Deploy → your app is live.
-
-🔒 Environment Variables
-Set in .env locally or via Render dashboard:
-
-ini
-Copy
-Edit
-OLLAMA_BASE_URL=https://<your-ngrok-or-render-url>
+MIT © Chris Jestin
